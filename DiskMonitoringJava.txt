@@ -1,0 +1,114 @@
+import java.awt.EventQueue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JTextArea;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+public class DiskMonitoring {
+    public static void main(String[] args) {
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    new DiskMonitoring();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+    public DiskMonitoring() {
+        JFrame frame = new JFrame("Disk Monitoring");
+        final JTextArea textArea = new JTextArea();
+        textArea.setBounds(50, 60, 250, 250);
+        JButton button = new JButton("Get Disks Status");
+        button.setBounds(50, 20, 250, 30);
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                JsonParser jp = new JsonParser();
+                JsonElement je = jp.parse(getInfo().toString());
+                textArea.setText(gson.toJson(je));
+            }
+        });
+        frame.add(button);
+        frame.add(textArea);
+        frame.setSize(400, 400);
+        frame.setBounds(50, 50, 400, 400);
+        frame.setLayout(null);
+        frame.setVisible(true);
+    }
+    private JsonObject getInfo() {
+        JsonObject joM = new JsonObject();
+        JsonObject jo;
+        JsonArray joAr = new JsonArray();
+        DiskInfo infoObj;
+        String date = DateTimeFormatter.ofPattern("yyyyMMdd24HHmmss", Locale.ENGLISH).format(LocalDateTime.now());
+        File[] computerDrives = File.listRoots();
+        DiskInfo[] infoObjArr = new DiskInfo[computerDrives.length];
+        int counter = 0;
+        for (File drive: computerDrives) {
+            jo = new JsonObject();
+            infoObj = new DiskInfo(drive.toString(), (drive.getFreeSpace() / (1024 * 1024 * 1024)) + " GB", (drive.getTotalSpace() / (1024 * 1024 * 1024)) + " GB", date);
+            infoObjArr[counter] = infoObj;
+            jo.addProperty("driveName", infoObj.getDriveName());
+            jo.addProperty("freeSpace", infoObj.getFreeSpace());
+            jo.addProperty("totalSpace", infoObj.getTotalSpace());
+            jo.addProperty("date", infoObj.getDate());
+            joAr.add(jo);
+            counter++;
+        }
+        joM.add("Disks", joAr);
+        saveToFile(joM, date);
+        saveToDB(infoObjArr);
+        return joM;
+    }
+    private void saveToFile(JsonObject obj, String date) {
+        try (FileWriter file = new FileWriter("C:\\Users\\sansa\\Desktop\\DiskMonitoring\\" + date + ".json")) {
+            file.write(obj.toString());
+            file.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private void saveToDB(DiskInfo[] infoObjArr) {
+        String jdbcURL = "jdbc:postgresql://localhost:5432/drive";
+        String username = "postgres";
+        String password = "sunsun12";
+        String INSERT_INFO_SQL = "INSERT INTO \"DiskSchema\".\"DiskInfo\"(\r\n" +
+            "	 \"driveName\", \"freeSpace\", \"totalSpace\", date)\r\n" +
+            "	VALUES (?, ?, ?, ?);";
+        try {
+            Connection connection = DriverManager.getConnection(jdbcURL, username, password);
+            System.out.println("Connected to PostgreSQL Server");
+            for (int j = 0; j < infoObjArr.length; j++) {
+                PreparedStatement preparedStatement = connection.prepareStatement(INSERT_INFO_SQL);
+                preparedStatement.setString(1, infoObjArr[j].getDriveName());
+                preparedStatement.setString(2, infoObjArr[j].getFreeSpace());
+                preparedStatement.setString(3, infoObjArr[j].getTotalSpace());
+                preparedStatement.setString(4, infoObjArr[j].getDate());
+                System.out.println(preparedStatement);
+                preparedStatement.executeUpdate();
+            }
+            connection.close();
+        } catch (SQLException e) {
+            System.out.println("Error in connecting to PostgreSQL Server");
+            e.printStackTrace();
+        }
+    }
+}

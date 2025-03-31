@@ -1,0 +1,43 @@
+public class DiskInfo {
+    private String driveName;
+    private String freeSpace;
+    private String totalSpace;
+    private String date;
+    public DiskInfo(String driveName, String freeSpace, String totalSpace, String date) {
+        super();
+        this.driveName = driveName;
+        this.freeSpace = freeSpace;
+        this.totalSpace = totalSpace;
+        this.date = date;
+    }
+    public String getDriveName() {
+        return driveName;
+    }
+    public void setDriveName(String driveName) {
+        this.driveName = driveName;
+    }
+    public String getFreeSpace() {
+        return freeSpace;
+    }
+    public void setFreeSpace(String freeSpace) {
+        this.freeSpace = freeSpace;
+    }
+    public String getTotalSpace() {
+        return totalSpace;
+    }
+    public void setTotalSpace(String totalSpace) {
+        this.totalSpace = totalSpace;
+    }
+    public String getDate() {
+        return date;
+    }
+    public void setDate(String date) {
+        this.date = date;
+    }
+    @Override
+    public String toString() {
+        String info = "\n**** Disk Usage Status ****\n" + "Drive Name: " + getDriveName() + "\n" + "Free Space: " + getFreeSpace() + "\n" + "Total Space: " + getTotalSpace() + "\n" + "Date: " + getDate() + "\n";
+        System.out.println(info);
+        return info;
+    }
+}
